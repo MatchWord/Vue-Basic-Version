@@ -1,98 +1,97 @@
-// api
-import { login, logout, getInfo } from "@/api/user";
-// cookie
-import { getToken, setToken, removeToken } from "@/utils/auth";
-// router
-// import { resetRouter } from "@/router";
+import { defineStore } from "pinia";
 
-const state = {
-  token: getToken(),
-  name: "",
-  avatar: ""
-};
+import { loginApi, logoutApi } from "@/api/auth";
+import { getUserInfoApi } from "@/api/system/user";
+import { resetRouter } from "@/router";
+import { store } from "@/store";
 
-const mutations = {
-  SET_TOKEN: (state, token) => {
-    state.token = token;
-  },
-  SET_NAME: (state, name) => {
-    state.name = name;
-  },
-  SET_AVATAR: (state, avatar) => {
-    state.avatar = avatar;
-  }
-};
+import { useStorage } from "@vueuse/core";
 
-const actions = {
-  // user login
-  login({ commit }, userInfo) {
-    const { username, password } = userInfo;
+export const useUserStore = defineStore("user", () => {
+  const user = {
+    roles: [],
+    perms: [],
+  };
+
+  const token = useStorage("accessToken", "");
+
+  /**
+   * 登录
+   *
+   * @param {LoginData}
+   * @returns
+   */
+  function login(loginData) {
     return new Promise((resolve, reject) => {
-      login({ username: username.trim(), password: password })
-        .then(response => {
-          const { data } = response;
-          commit("SET_TOKEN", data.token);
-          setToken(data.token);
+      loginApi(loginData)
+        .then(({ data }) => {
+          const { token_type, access_token } = data;
+          token.value = token_type + " " + access_token; // Bearer eyJhbGciOiJIUzI1NiJ9.xxx.xxx
           resolve();
         })
-        .catch(error => {
+        .catch((error) => {
           reject(error);
         });
     });
-  },
+  }
 
-  // get user info
-  getInfo({ commit, state }) {
+  // 获取信息(用户昵称、头像、角色集合、权限集合)
+  function getUserInfo() {
     return new Promise((resolve, reject) => {
-      getInfo(state.token)
-        .then(response => {
-          const { data } = response;
-
+      getUserInfoApi()
+        .then(({ data }) => {
           if (!data) {
             reject("Verification failed, please Login again.");
+            return;
           }
-
-          const { name, avatar } = data;
-
-          commit("SET_NAME", name);
-          commit("SET_AVATAR", avatar);
+          if (!data.roles || data.roles.length <= 0) {
+            reject("getUserInfo: roles must be a non-null array!");
+            return;
+          }
+          Object.assign(user, { ...data });
           resolve(data);
         })
-        .catch(error => {
+        .catch((error) => {
           reject(error);
         });
     });
-  },
+  }
 
   // user logout
-  logout({ commit, state }) {
+  function logout() {
     return new Promise((resolve, reject) => {
-      logout(state.token)
+      logoutApi()
         .then(() => {
-          commit("SET_TOKEN", "");
-          removeToken();
-          // resetRouter();
+          token.value = "";
+          location.reload(); // 清空路由
           resolve();
         })
-        .catch(error => {
+        .catch((error) => {
           reject(error);
         });
     });
-  },
+  }
 
   // remove token
-  resetToken({ commit }) {
-    return new Promise(resolve => {
-      commit("SET_TOKEN", "");
-      removeToken();
+  function resetToken() {
+    return new Promise((resolve) => {
+      token.value = "";
+      resetRouter();
       resolve();
     });
   }
-};
 
-export default {
-  namespaced: true,
-  state,
-  mutations,
-  actions
-};
+  return {
+    token,
+    user,
+    login,
+    getUserInfo,
+    logout,
+    resetToken,
+  };
+});
+
+// 非setup
+export function useUserStoreHook() {
+  return useUserStore(store);
+}

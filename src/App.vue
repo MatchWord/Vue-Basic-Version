@@ -1,11 +1,12 @@
-<template>
-  <div id="app">
-    <router-view />
-  </div>
-</template>
+<script setup>
+import { ElConfigProvider } from "element-plus";
+import { useAppStore } from "@/store/modules/app";
 
-<script>
-export default {
-  name: "App"
-};
+const appStore = useAppStore();
 </script>
+
+<template>
+  <el-config-provider :locale="appStore.locale" :size="appStore.size">
+    <router-view />
+  </el-config-provider>
+</template>

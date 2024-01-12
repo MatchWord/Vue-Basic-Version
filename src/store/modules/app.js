@@ -1,53 +1,93 @@
-import Cookies from "js-cookie";
+import { defineStore } from "pinia";
+import { useStorage } from "@vueuse/core";
+import defaultSettings from "@/settings";
+import { reactive, computed } from "vue";
+// 导入 Element Plus 中英文语言包
+import zhCn from "element-plus/es/locale/lang/zh-cn";
+import en from "element-plus/es/locale/lang/en";
 
-const state = {
-  sidebar: {
-    opened: Cookies.get("sidebarStatus")
-      ? !!+Cookies.get("sidebarStatus")
-      : true, // 菜单是否展开
-    withoutAnimation: false // 是否有动画
-  },
-  device: "desktop" // 设备类型
-};
+// setup
+export const useAppStore = defineStore("app", () => {
+  // state
+  const device = useStorage("device", "desktop");
+  const size = useStorage("size", defaultSettings.size);
+  const language = useStorage("language", defaultSettings.language);
 
-const mutations = {
-  // toggleSideBar
-  TOGGLE_SIDEBAR: state => {
-    state.sidebar.opened = !state.sidebar.opened;
-    state.sidebar.withoutAnimation = false;
-    if (state.sidebar.opened) {
-      Cookies.set("sidebarStatus", 1);
+  const sidebarStatus = useStorage("sidebarStatus", "closed");
+
+  const sidebar = reactive({
+    opened: sidebarStatus.value !== "closed",
+    withoutAnimation: false,
+  });
+  const activeTopMenu = useStorage("activeTop", "");
+  /**
+   * 根据语言标识读取对应的语言包
+   */
+  const locale = computed(() => {
+    if (language?.value == "en") {
+      return en;
     } else {
-      Cookies.set("sidebarStatus", 0);
+      return zhCn;
     }
-  },
-  // closeSideBar
-  CLOSE_SIDEBAR: (state, withoutAnimation) => {
-    Cookies.set("sidebarStatus", 0);
-    state.sidebar.opened = false;
-    state.sidebar.withoutAnimation = withoutAnimation;
-  },
-  // toggleDevice
-  TOGGLE_DEVICE: (state, device) => {
-    state.device = device;
-  }
-};
+  });
 
-const actions = {
-  toggleSideBar({ commit }) {
-    commit("TOGGLE_SIDEBAR");
-  },
-  closeSideBar({ commit }, { withoutAnimation }) {
-    commit("CLOSE_SIDEBAR", withoutAnimation);
-  },
-  toggleDevice({ commit }, device) {
-    commit("TOGGLE_DEVICE", device);
+  // actions
+  function toggleSidebar() {
+    sidebar.opened = !sidebar.opened;
+    sidebar.withoutAnimation = false;
+    if (sidebar.opened) {
+      sidebarStatus.value = "opened";
+    } else {
+      sidebarStatus.value = "closed";
+    }
   }
-};
 
-export default {
-  namespaced: true,
-  state,
-  mutations,
-  actions
-};
+  function closeSideBar(withoutAnimation) {
+    sidebar.opened = false;
+    sidebar.withoutAnimation = withoutAnimation;
+    sidebarStatus.value = "closed";
+  }
+
+  function openSideBar(withoutAnimation) {
+    sidebar.opened = true;
+    sidebar.withoutAnimation = withoutAnimation;
+    sidebarStatus.value = "opened";
+  }
+
+  function toggleDevice(val) {
+    device.value = val;
+  }
+
+  function changeSize(val) {
+    size.value = val;
+  }
+  /**
+   * 切换语言
+   *
+   * @param val
+   */
+  function changeLanguage(val) {
+    language.value = val;
+  }
+  /**
+   * 混合模式顶部切换
+   */
+  function changeTopActive(val) {
+    activeTopMenu.value = val;
+  }
+  return {
+    device,
+    sidebar,
+    language,
+    locale,
+    size,
+    activeTopMenu,
+    toggleDevice,
+    changeSize,
+    changeLanguage,
+    toggleSidebar,
+    closeSideBar,
+    openSideBar,
+    changeTopActive,
+  };
+});

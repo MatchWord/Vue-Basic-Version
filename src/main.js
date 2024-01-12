@@ -1,23 +1,26 @@
-import Vue from "vue";
+import { createApp } from "vue";
 import App from "./App.vue";
-import router from "./router";
-import store from "./store";
-// element-ui
-import ElementUI from "element-ui";
-import "element-ui/lib/theme-chalk/index.css";
-import locale from "element-ui/lib/locale/lang/en";
-// css reset
-import "normalize.css";
-// global css
+import router from "@/router";
+import { setupStore } from "@/store";
+import { setupDirective } from "@/directive";
+import { setupSvgIcon } from "@/components/SvgIcon/index";
+
+import "@/permission";
+
+// 国际化
+import i18n from "@/lang/index";
+
+// 样式
+import "element-plus/theme-chalk/dark/css-vars.css";
 import "@/styles/index.scss";
-// global font
-import "@/assets/plateform-font/iconfont.css";
-Vue.use(ElementUI, { locale });
+import "uno.css";
 
-Vue.config.productionTip = false;
+const app = createApp(App);
+// 全局注册 自定义指令(directive)
+setupDirective(app);
+// 全局注册 状态管理(store)
+setupStore(app);
+// 全局注册 自定义svg图标(svg)
+setupSvgIcon(app);
 
-new Vue({
-  router,
-  store,
-  render: h => h(App)
-}).$mount("#app");
+app.use(router).use(i18n).mount("#app");
